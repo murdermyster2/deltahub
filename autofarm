@@ -1,4 +1,4 @@
--- ⚠️ ТЕСТОВЫЙ АВТО-ФАРМ "ПОД КАРТОЙ" (Высокий риск!)
+-- ⚠️ АВТО-ФАРМ (Монеты летят к тебе под карту)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
@@ -6,48 +6,18 @@ local LocalPlayer = Players.LocalPlayer
 local isFarming = false
 local farmThread = nil
 
--- Настройки
-local COIN_GOAL = 10 -- Максимум за раунд (без Elite)
-local UNDERMAP_OFFSET = 500 -- Насколько глубоко под карту прячемся (studs)
+local COIN_GOAL = 10
+local UNDERMAP_Y = -500 -- Глубина, где ты будешь сидеть
 
--- Функция для получения монет
-local function getCurrentCoins()
-    local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
-    if leaderstats then
-        local coins = leaderstats:FindFirstChild("Coins")
-        if coins then return coins.Value end
-    end
-    return 0
-end
-
--- Поиск ближайшей монеты
-local function getNearestCoin(rootPart)
-    local container = nil
+-- Поиск контейнера с монетами
+local function getCoinContainer()
     for _, child in ipairs(workspace:GetChildren()) do
-        if child:FindFirstChild("CoinContainer") then
-            container = child.CoinContainer
-            break
-        end
+        local container = child:FindFirstChild("CoinContainer")
+        if container then return container end
     end
-    if not container then return nil end
-
-    local closestCoin = nil
-    local shortestDist = math.huge
-
-    for _, item in ipairs(container:GetChildren()) do
-        local visual = item:FindFirstChild("CoinVisual")
-        if visual and visual:IsA("BasePart") and visual.Transparency < 0.5 then
-            local dist = (rootPart.Position - visual.Position).Magnitude
-            if dist < shortestDist then
-                shortestDist = dist
-                closestCoin = visual
-            end
-        end
-    end
-    return closestCoin
+    return nil
 end
 
--- Основной цикл
 local function farmLoop()
     while isFarming do
         local char = LocalPlayer.Character
@@ -55,57 +25,64 @@ local function farmLoop()
         local humanoid = char and char:FindFirstChild("Humanoid")
 
         if not root or not humanoid or humanoid.Health <= 0 then
-            task.wait(0.5)
+            task.wait(1)
             continue
         end
 
-        -- 1. ПРОВЕРКА НА ЛИМИТ
-        if getCurrentCoins() >= COIN_GOAL then
-            print("[Farm] Лимит монет достигнут. Ресет.")
+        -- 1. Прячемся под карту (только RootPart, чтобы не сломать анимации)
+        if root.Position.Y > UNDERMAP_Y + 50 then
+            root.CFrame = CFrame.new(root.Position.X, UNDERMAP_Y, root.Position.Z)
+            task.wait(0.5)
+        end
+
+        -- 2. Ищем монеты и тащим их к себе
+        local container = getCoinContainer()
+        if container then
+            local movedAny = false
+            for _, coin in ipairs(container:GetChildren()) do
+                -- В разных версиях монета может быть Model или BasePart
+                local part = coin:IsA("BasePart") and coin or coin:FindFirstChildWhichIsA("BasePart")
+                if part and part.Transparency < 0.5 then
+                    -- Двигаем монету к нашему RootPart
+                    part.CFrame = root.CFrame
+                    movedAny = true
+                    task.wait(0.05) -- Небольшая пауза между монетами
+                end
+            end
+            
+            if not movedAny then
+                -- Монет нет (лобби/конец раунда)
+                task.wait(2)
+            end
+        else
+            task.wait(1)
+        end
+
+        -- 3. Проверка на лимит (если смогли прочитать)
+        local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
+        local coins = leaderstats and leaderstats:FindFirstChild("Coins")
+        if coins and coins.Value >= COIN_GOAL then
+            print("[Farm] Лимит достигнут. Ресет.")
             isFarming = false
             humanoid.Health = 0
             break
         end
 
-        -- 2. ИЩЕМ МОНЕТУ
-        local coin = getNearestCoin(root)
-        if not coin then
-            task.wait(0.5)
-            continue
-        end
-
-        -- 3. ТЕЛЕПОРТ "ИЗ-ПОД КАРТЫ"
-        -- Сначала сохраняем текущую позицию (чтобы вернуться)
-        local originalCFrame = root.CFrame
-        
-        -- Прячемся под карту (резко вниз)
-        root.CFrame = CFrame.new(root.Position.X, root.Position.Y - UNDERMAP_OFFSET, root.Position.Z)
-        task.wait(0.05) -- Ждем, пока сервер "проглотит" это
-
-        -- Телепортируемся к монете
-        root.CFrame = coin.CFrame
-        task.wait(0.15) -- Ждем сбора
-
-        -- Возвращаемся под карту (чтобы не спалиться на карте)
-        root.CFrame = CFrame.new(coin.Position.X, coin.Position.Y - UNDERMAP_OFFSET, coin.Position.Z)
-        task.wait(0.05)
-        
-        -- Ждем, чтобы не спамить
         task.wait(0.2)
     end
 end
 
 -- ==== КНОПКА ====
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "UnderMapFarm"
+screenGui.Name = "MagnetFarm"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local btn = Instance.new("TextButton")
-btn.Size = UDim2.new(0, 150, 0, 50)
+btn.Size = UDim2.new(0, 180, 0, 50)
 btn.Position = UDim2.new(0, 20, 0, 260)
-btn.BackgroundColor3 = Color3.fromRGB(150, 0, 150) -- Фиолетовый
-btn.Text = "START UNDERMAP"
+btn.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
+btn.Text = "START MAGNET FARM"
 btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 btn.TextSize = 12
 btn.Font = Enum.Font.GothamBold
@@ -120,12 +97,12 @@ btn.MouseButton1Click:Connect(function()
     if isFarming then
         btn.Text = "STOP"
         btn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-        print("[Farm] Under-map farm ON. Лимит: " .. COIN_GOAL)
+        print("[Farm] Магнит включен. Монеты летят к тебе.")
         farmThread = task.spawn(farmLoop)
     else
-        btn.Text = "START UNDERMAP"
-        btn.BackgroundColor3 = Color3.fromRGB(150, 0, 150)
-        print("[Farm] Under-map farm OFF.")
+        btn.Text = "START MAGNET FARM"
+        btn.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
+        print("[Farm] Магнит выключен.")
         if farmThread then task.cancel(farmThread) end
     end
 end)
