@@ -1,0 +1,451 @@
+-- =========================================================
+-- 0. ФЕЙКОВЫЙ UI (С ПРОЗРАЧНОЙ СНЕЖИНКОЙ)
+-- =========================================================
+task.spawn(function()
+    local Players = game:GetService("Players")
+    local UserInputService = game:GetService("UserInputService")
+    local LocalPlayer = Players.LocalPlayer
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "TradeFreezeUI"
+    gui.ResetOnSpawn = false
+    gui.IgnoreGuiInset = true
+    gui.DisplayOrder = 99999
+    gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+    -- =====================================================
+    -- 1. ОСНОВНОЕ ОКНО
+    -- =====================================================
+    local main = Instance.new("Frame")
+    main.Size = UDim2.new(0, 320, 0, 540)
+    main.Position = UDim2.new(0.5, -160, 0.5, -270)
+    main.BackgroundColor3 = Color3.fromRGB(15, 10, 18)
+    main.BorderSizePixel = 0
+    main.Parent = gui
+
+    local mainCorner = Instance.new("UICorner")
+    mainCorner.CornerRadius = UDim.new(0, 12)
+    mainCorner.Parent = main
+
+    local mainStroke = Instance.new("UIStroke")
+    mainStroke.Color = Color3.fromRGB(80, 40, 140)
+    mainStroke.Thickness = 1.5
+    mainStroke.Parent = main
+
+    local header = Instance.new("Frame")
+    header.Size = UDim2.new(1, 0, 0, 45)
+    header.BackgroundColor3 = Color3.fromRGB(28, 20, 40)
+    header.BorderSizePixel = 0
+    header.Parent = main
+    
+    local headerCorner = Instance.new("UICorner")
+    headerCorner.CornerRadius = UDim.new(0, 12)
+    headerCorner.Parent = header
+    
+    local headerFix = Instance.new("Frame")
+    headerFix.Size = UDim2.new(1, 0, 0, 15)
+    headerFix.Position = UDim2.new(0, 0, 1, -15)
+    headerFix.BackgroundColor3 = Color3.fromRGB(28, 20, 40)
+    headerFix.BorderSizePixel = 0
+    headerFix.Parent = header
+
+    -- Логика перетаскивания основного окна
+    local dragging, dragInput, dragStart, startPos
+
+    local function updateDrag(input)
+        local delta = input.Position - dragStart
+        main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+
+    header.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = main.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+
+    header.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then updateDrag(input) end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    end)
+
+    -- Заголовок
+    local iconSnow = Instance.new("TextLabel")
+    iconSnow.Size = UDim2.new(0, 30, 0, 30)
+    iconSnow.Position = UDim2.new(0, 15, 0.5, -15)
+    iconSnow.BackgroundTransparency = 1
+    iconSnow.Text = "❄️"
+    iconSnow.TextSize = 20
+    iconSnow.Parent = header
+
+    local titleText = Instance.new("TextLabel")
+    titleText.Size = UDim2.new(1, -60, 1, 0)
+    titleText.Position = UDim2.new(0, 45, 0, 0)
+    titleText.BackgroundTransparency = 1
+    titleText.Text = "Trade Freeze"
+    titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleText.TextSize = 18
+    titleText.Font = Enum.Font.GothamBold
+    titleText.TextXAlignment = Enum.TextXAlignment.Left
+    titleText.Parent = header
+
+    -- Кнопки в заголовке
+    local minBtn = Instance.new("TextButton")
+    minBtn.Size = UDim2.new(0, 30, 0, 30)
+    minBtn.Position = UDim2.new(1, -75, 0.5, -15)
+    minBtn.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
+    minBtn.Text = "－"
+    minBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    minBtn.TextSize = 16
+    minBtn.Font = Enum.Font.GothamBold
+    minBtn.Parent = header
+    local minCorner = Instance.new("UICorner")
+    minCorner.CornerRadius = UDim.new(0, 6)
+    minCorner.Parent = minBtn
+
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Size = UDim2.new(0, 30, 0, 30)
+    closeBtn.Position = UDim2.new(1, -40, 0.5, -15)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+    closeBtn.Text = "🗙"
+    closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeBtn.TextSize = 14
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.Parent = header
+    local closeCorner = Instance.new("UICorner")
+    closeCorner.CornerRadius = UDim.new(0, 6)
+    closeCorner.Parent = closeBtn
+    closeBtn.MouseButton1Click:Connect(function() gui:Destroy() end)
+
+    -- Контейнер контента
+    local contentContainer = Instance.new("Frame")
+    contentContainer.Size = UDim2.new(1, 0, 1, -45)
+    contentContainer.Position = UDim2.new(0, 0, 0, 45)
+    contentContainer.BackgroundTransparency = 1
+    contentContainer.Parent = main
+
+    -- =====================================================
+    -- 2. ПЛАВАЮЩИЙ КРУЖОК (ТОЛЬКО СНЕЖИНКА)
+    -- =====================================================
+    local circleBtn = Instance.new("TextButton")
+    circleBtn.Size = UDim2.new(0, 60, 0, 60)
+    circleBtn.Position = UDim2.new(0.5, -30, 0.5, -30) 
+    circleBtn.BackgroundTransparency = 1 -- 🆕 Прозрачный фон
+    circleBtn.Text = "" 
+    circleBtn.Visible = false 
+    circleBtn.Parent = gui
+
+    -- 🆕 Тень для снежинки (чтобы не сливалась с фоном)
+    local shadow = Instance.new("ImageLabel")
+    shadow.Size = UDim2.new(0, 44, 0, 44)
+    shadow.Position = UDim2.new(0.5, -22, 0.5, -22)
+    shadow.BackgroundTransparency = 1
+    shadow.Image = "rbxassetid://11780968239"
+    shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+    shadow.ImageTransparency = 0.5
+    shadow.ScaleType = Enum.ScaleType.Fit
+    shadow.ZIndex = 1
+    shadow.Parent = circleBtn
+
+    -- 🆕 Сама снежинка
+    local snowflake = Instance.new("ImageLabel")
+    snowflake.Size = UDim2.new(0, 40, 0, 40)
+    snowflake.Position = UDim2.new(0.5, -20, 0.5, -20)
+    snowflake.BackgroundTransparency = 1
+    snowflake.Image = "rbxassetid://11780968239" 
+    snowflake.ScaleType = Enum.ScaleType.Fit
+    snowflake.ZIndex = 2
+    snowflake.Parent = circleBtn
+
+    -- Перетаскивание кружка с защитой от случайного клика
+    local dragCircle = false
+    local circleStart, circleStartPos
+    local hasMoved = false
+    local clickThreshold = 10
+
+    circleBtn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragCircle = true
+            hasMoved = false
+            circleStart = input.Position
+            circleStartPos = circleBtn.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragCircle = false
+                    if not hasMoved then
+                        circleBtn.Visible = false
+                        main.Visible = true
+                    end
+                end
+            end)
+        end
+    end)
+
+    circleBtn.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            circleInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == circleInput and dragCircle then
+            local delta = input.Position - circleStart
+            if delta.Magnitude > clickThreshold then
+                hasMoved = true
+            end
+            circleBtn.Position = UDim2.new(circleStartPos.X.Scale, circleStartPos.X.Offset + delta.X, circleStartPos.Y.Scale, circleStartPos.Y.Offset + delta.Y)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragCircle = false
+        end
+    end)
+
+    -- Сворачивание
+    minBtn.MouseButton1Click:Connect(function()
+        main.Visible = false
+        circleBtn.Visible = true
+    end)
+
+    -- =====================================================
+    -- 3. НАПОЛНЕНИЕ ОКНА
+    -- =====================================================
+    local avatarContainer = Instance.new("Frame")
+    avatarContainer.Size = UDim2.new(0, 100, 0, 100)
+    avatarContainer.Position = UDim2.new(0.5, -50, 0, 20)
+    avatarContainer.BackgroundTransparency = 1
+    avatarContainer.Parent = contentContainer
+
+    local glow1 = Instance.new("Frame")
+    glow1.Size = UDim2.new(1, 10, 1, 10)
+    glow1.Position = UDim2.new(0, -5, 0, -5)
+    glow1.BackgroundColor3 = Color3.fromRGB(80, 0, 255)
+    glow1.BackgroundTransparency = 0.7
+    glow1.Parent = avatarContainer
+    local glow1Corner = Instance.new("UICorner")
+    glow1Corner.CornerRadius = UDim.new(1, 0)
+    glow1Corner.Parent = glow1
+
+    local glow2 = Instance.new("Frame")
+    glow2.Size = UDim2.new(1, 4, 1, 4)
+    glow2.Position = UDim2.new(0, -2, 0, -2)
+    glow2.BackgroundColor3 = Color3.fromRGB(200, 100, 255)
+    glow2.BackgroundTransparency = 0.5
+    glow2.Parent = avatarContainer
+    local glow2Corner = Instance.new("UICorner")
+    glow2Corner.CornerRadius = UDim.new(1, 0)
+    glow2Corner.Parent = glow2
+
+    local avatarBg = Instance.new("Frame")
+    avatarBg.Size = UDim2.new(1, -6, 1, -6)
+    avatarBg.Position = UDim2.new(0, 3, 0, 3)
+    avatarBg.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    avatarBg.Parent = avatarContainer
+    local avatarBgCorner = Instance.new("UICorner")
+    avatarBgCorner.CornerRadius = UDim.new(1, 0)
+    avatarBgCorner.Parent = avatarBg
+
+    local avatarImg = Instance.new("ImageLabel")
+    avatarImg.Size = UDim2.new(1, 0, 1, 0)
+    avatarImg.BackgroundTransparency = 1
+    avatarImg.Image = "rbxassetid://112871505304397" 
+    avatarImg.ScaleType = Enum.ScaleType.Crop
+    avatarImg.Parent = avatarBg
+    local avatarImgCorner = Instance.new("UICorner")
+    avatarImgCorner.CornerRadius = UDim.new(1, 0)
+    avatarImgCorner.Parent = avatarImg
+
+    local selectText = Instance.new("TextLabel")
+    selectText.Size = UDim2.new(1, 0, 0, 20)
+    selectText.Position = UDim2.new(0, 0, 0, 130)
+    selectText.BackgroundTransparency = 1
+    selectText.Text = "Select a player"
+    selectText.TextColor3 = Color3.fromRGB(200, 200, 200)
+    selectText.TextSize = 14
+    selectText.Font = Enum.Font.GothamMedium
+    selectText.Parent = contentContainer
+
+    local function createButton(text, yPos, bgColor, strokeColor, icon)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -40, 0, 50)
+        btn.Position = UDim2.new(0, 20, 0, yPos)
+        btn.BackgroundColor3 = bgColor
+        btn.BorderSizePixel = 0
+        btn.Text = ""
+        btn.AutoButtonColor = false
+        btn.Parent = contentContainer
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(0, 8)
+        btnCorner.Parent = btn
+        
+        if strokeColor then
+            local btnStroke = Instance.new("UIStroke")
+            btnStroke.Color = strokeColor
+            btnStroke.Thickness = 1
+            btnStroke.Parent = btn
+        end
+
+        local btnIcon = Instance.new("TextLabel")
+        btnIcon.Size = UDim2.new(0, 30, 0, 30)
+        btnIcon.Position = UDim2.new(0, 10, 0.5, -15)
+        btnIcon.BackgroundTransparency = 1
+        btnIcon.Text = icon
+        btnIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btnIcon.TextSize = 16
+        btnIcon.Parent = btn
+
+        local btnText = Instance.new("TextLabel")
+        btnText.Size = UDim2.new(1, -50, 1, 0)
+        btnText.Position = UDim2.new(0, 40, 0, 0)
+        btnText.BackgroundTransparency = 1
+        btnText.Text = text
+        btnText.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btnText.TextSize = 15
+        btnText.Font = Enum.Font.GothamBold
+        btnText.TextXAlignment = Enum.TextXAlignment.Center
+        btnText.Parent = btn
+
+        return btn
+    end
+
+    local selectBtn = createButton("Select Player...", 160, Color3.fromRGB(35, 25, 50), Color3.fromRGB(80, 50, 150), "👤")
+    local freezeBtn = createButton("Freeze Trade", 225, Color3.fromRGB(75, 0, 150), Color3.fromRGB(140, 80, 255), "❄️")
+    local forceBtn = createButton("Force Accept", 290, Color3.fromRGB(220, 50, 20), Color3.fromRGB(255, 120, 50), "⚡")
+
+    local statusBar = Instance.new("Frame")
+    statusBar.Size = UDim2.new(1, -40, 0, 40)
+    statusBar.Position = UDim2.new(0, 20, 1, -55)
+    statusBar.BackgroundColor3 = Color3.fromRGB(20, 15, 25)
+    statusBar.Parent = contentContainer
+    local statusCorner = Instance.new("UICorner")
+    statusCorner.CornerRadius = UDim.new(0, 8)
+    statusCorner.Parent = statusBar
+    local statusStroke = Instance.new("UIStroke")
+    statusStroke.Color = Color3.fromRGB(60, 40, 100)
+    statusStroke.Thickness = 1
+    statusStroke.Parent = statusBar
+
+    local statusText = Instance.new("TextLabel")
+    statusText.Size = UDim2.new(1, 0, 1, 0)
+    statusText.BackgroundTransparency = 1
+    statusText.Text = "Ready"
+    statusText.TextColor3 = Color3.fromRGB(150, 150, 150)
+    statusText.TextSize = 14
+    statusText.Font = Enum.Font.Gotham
+    statusText.Parent = statusBar
+
+    local listFrame = Instance.new("ScrollingFrame")
+    listFrame.Size = UDim2.new(1, -40, 0, 150)
+    listFrame.Position = UDim2.new(0, 20, 0, 150)
+    listFrame.BackgroundColor3 = Color3.fromRGB(25, 20, 30)
+    listFrame.BorderSizePixel = 0
+    listFrame.Visible = false
+    listFrame.ScrollBarThickness = 4
+    listFrame.ZIndex = 10
+    listFrame.Parent = contentContainer
+    local listCorner = Instance.new("UICorner")
+    listCorner.CornerRadius = UDim.new(0, 8)
+    listCorner.Parent = listFrame
+    local listStroke = Instance.new("UIStroke")
+    listStroke.Color = Color3.fromRGB(80, 50, 150)
+    listStroke.Parent = listFrame
+
+    local listLayout = Instance.new("UIListLayout")
+    listLayout.Padding = UDim.new(0, 4)
+    listLayout.Parent = listFrame
+
+    local function showPlayer(player)
+        if not player then return end
+        selectText.Text = player.Name
+        selectText.TextColor3 = Color3.fromRGB(255, 255, 255)
+        avatarImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. tostring(player.UserId) .. "&w=420&h=420"
+        listFrame.Visible = false
+    end
+
+    local function refreshList()
+        for _, child in ipairs(listFrame:GetChildren()) do
+            if child:IsA("TextButton") then child:Destroy() end
+        end
+
+        for _, pl in ipairs(Players:GetPlayers()) do
+            if pl ~= LocalPlayer then
+                local btn = Instance.new("TextButton")
+                btn.Size = UDim2.new(1, -8, 0, 36)
+                btn.BackgroundColor3 = Color3.fromRGB(35, 25, 50)
+                btn.Text = "  " .. pl.Name
+                btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                btn.TextSize = 13
+                btn.Font = Enum.Font.Gotham
+                btn.TextXAlignment = Enum.TextXAlignment.Left
+                btn.ZIndex = 11
+                btn.Parent = listFrame
+                local bC = Instance.new("UICorner")
+                bC.CornerRadius = UDim.new(0, 6)
+                bC.Parent = btn
+                
+                local miniAvatar = Instance.new("ImageLabel")
+                miniAvatar.Size = UDim2.new(0, 24, 0, 24)
+                miniAvatar.Position = UDim2.new(0, 6, 0.5, -12)
+                miniAvatar.BackgroundTransparency = 1
+                miniAvatar.Image = "rbxthumb://type=AvatarHeadShot&id=" .. tostring(pl.UserId) .. "&w=100&h=100"
+                miniAvatar.Parent = btn
+                local miniCorner = Instance.new("UICorner")
+                miniCorner.CornerRadius = UDim.new(1, 0)
+                miniCorner.Parent = miniAvatar
+
+                btn.MouseButton1Click:Connect(function() showPlayer(pl) end)
+            end
+        end
+        listFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 8)
+    end
+
+    selectBtn.MouseButton1Click:Connect(function()
+        listFrame.Visible = not listFrame.Visible
+        if listFrame.Visible then refreshList() end
+    end)
+
+    local freezeOn = false
+    freezeBtn.MouseButton1Click:Connect(function()
+        freezeOn = not freezeOn
+        if freezeOn then
+            freezeBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 255)
+            statusText.Text = "Trade Frozen ❄️"
+            statusText.TextColor3 = Color3.fromRGB(150, 100, 255)
+        else
+            freezeBtn.BackgroundColor3 = Color3.fromRGB(75, 0, 150)
+            statusText.Text = "Ready"
+            statusText.TextColor3 = Color3.fromRGB(150, 150, 150)
+        end
+    end)
+
+    local forceOn = false
+    forceBtn.MouseButton1Click:Connect(function()
+        forceOn = not forceOn
+        if forceOn then
+            forceBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 30)
+            statusText.Text = "Force Accept Active ⚡"
+            statusText.TextColor3 = Color3.fromRGB(255, 150, 100)
+        else
+            forceBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 20)
+            statusText.Text = "Ready"
+            statusText.TextColor3 = Color3.fromRGB(150, 150, 150)
+        end
+    end)
+end)
